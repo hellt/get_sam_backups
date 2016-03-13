@@ -17,7 +17,7 @@ def get_args():
     parser.add_argument('-d', '--directory', default='~', action='store',
                         help='Directory to put extracted backups to')
     parser.add_argument('-z', '--zip', required=False, action='store_true',
-                        help='perform archiving of extracted backups')
+                        help='Archive extracted backups')
     args = parser.parse_args()
     return args
 
@@ -36,7 +36,7 @@ def zipdir(path, ziph):
 def main():
     """
     Command-line program for retrieving NE backups from SAM server.
-    see http://noshut.ru/
+    see http://noshut.ru/2016/03/retrieving-network-elements-backup-from-5620-sam/
     for detailed explanation
     """
 
