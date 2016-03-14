@@ -1,25 +1,43 @@
-import argparse
+# import argparse
 import os
 import shutil
 import tempfile
 import time
 import zipfile
+import getopt
+import sys
 
 
-def get_args():
-    """
-    Supports the command-line arguments listed below.
-    """
-    parser = argparse.ArgumentParser(
-            description='Process args for retrieving NE backups')
-    parser.add_argument('-p', '--path', required=False, default='/opt/5620sam/nebackup/SROS', action='store',
-                        help='Path to the directory with NE backups (by default /opt/5620sam/nebackup/SROS')
-    parser.add_argument('-d', '--directory', default='~', action='store',
-                        help='Directory to put extracted backups to')
-    parser.add_argument('-z', '--zip', required=False, action='store_true',
-                        help='Archive extracted backups')
-    args = parser.parse_args()
-    return args
+# def get_args():
+#     """
+#     Supports the command-line arguments listed below.
+#     """
+#     parser = argparse.ArgumentParser(
+#             description='Process args for retrieving NE backups')
+#     parser.add_argument('-p', '--path', required=False, default='/opt/5620sam/nebackup/SROS', action='store',
+#                         help='Path to the directory with NE backups (by default /opt/5620sam/nebackup/SROS')
+#     parser.add_argument('-d', '--directory', default='~', action='store',
+#                         help='Directory to put extracted backups to')
+#     parser.add_argument('-z', '--zip', required=False, action='store_true',
+#                         help='Archive extracted backups')
+#     args = parser.parse_args()
+#     return args
+
+def get_args(argv, args):
+    try:
+        opts, vals = getopt.getopt(argv, "hzp:d:")
+    except getopt.GetoptError, err:
+        # print help information and exit:
+        print str(err)
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if "-d" == opt:
+            args['directory'] = arg
+        elif "-p" == opt:
+            args['path'] = arg
+        elif "-z" == opt:
+            args['zip'] = True
 
 
 def zipdir(path, ziph):
@@ -33,27 +51,32 @@ def zipdir(path, ziph):
             ziph.write(os.path.relpath(os.path.join(root, my_file), os.path.join(path, '..')))
 
 
-def main():
+def main(argv):
     """
     Command-line program for retrieving NE backups from SAM server.
     see http://noshut.ru/2016/03/retrieving-network-elements-backup-from-5620-sam/
     for detailed explanation
     """
+    # define default config values
+    args = {'directory': '~',
+            'path': '/opt/5620sam/nebackup/SROS',
+            'zip': False}
+    # modify config values if they passed as arguments
+    get_args(argv, args)
 
-    args = get_args()
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S")
-    
+
     # compose dir name for storing latest backups and try to make that directory
-    new_backups_dir = os.path.join(os.path.expanduser(args.directory), "NE_backups__" + timestamp)
+    new_backups_dir = os.path.join(os.path.expanduser(args['directory']), "NE_backups__" + timestamp)
     try:
         os.makedirs(new_backups_dir)
     except os.error:
         print "Couldn't create directory %s" % new_backups_dir
 
     # if specified path is a directory, traverse into it and copy latest backups
-    if os.path.isdir(args.path):
-        os.chdir(args.path)
-        for NE_dir in os.listdir(args.path):
+    if os.path.isdir(args['path']):
+        os.chdir(args['path'])
+        for NE_dir in os.listdir(args['path']):
             # get real path of directory to be copied by means of symlink "latest"
             target_dir = os.path.realpath(os.path.join(os.path.abspath(NE_dir), 'latest'))
             # get date of latest backup and append it later to the new_backups_dir
@@ -65,7 +88,7 @@ def main():
         print "Seems like path %s does not exist" % args.path
 
     # if archiving is needed
-    if args.zip:
+    if args['zip']:
         print "Creating the archive..."
         tmp_dir = tempfile.mkdtemp()
         zipf = zipfile.ZipFile(os.path.join(tmp_dir, "NE_backups.zip"), 'w', zipfile.ZIP_DEFLATED)
@@ -80,5 +103,5 @@ def main():
 
 # Start program
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
     # TODO: to add backup retrieval on a specified date
